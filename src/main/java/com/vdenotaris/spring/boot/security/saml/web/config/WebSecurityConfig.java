@@ -29,6 +29,9 @@ import org.apache.velocity.app.VelocityEngine;
 import org.opensaml.saml2.metadata.provider.HTTPMetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
+import org.opensaml.saml2.metadata.provider.ResourceBackedMetadataProvider;
+import org.opensaml.util.resource.ClasspathResource;
+import org.opensaml.util.resource.ResourceException;
 import org.opensaml.xml.parse.ParserPool;
 import org.opensaml.xml.parse.StaticBasicParserPool;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -261,6 +265,27 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter implements I
     }
 
     @Bean
+    @Qualifier("idp-pingid")
+    public ExtendedMetadataDelegate pingIdExtendedMetadataProvider()
+            throws MetadataProviderException {
+        ClasspathResource metadataResource = null;
+        try {
+            metadataResource = new ClasspathResource("/saml/pingid-saml2-metadata-idp.xml");
+        } catch (ResourceException e) {
+            e.printStackTrace();
+        }
+        ResourceBackedMetadataProvider resourceBackedMetadataProvider = new ResourceBackedMetadataProvider(
+                this.backgroundTaskTimer, metadataResource);
+        resourceBackedMetadataProvider.setParserPool(parserPool());
+        ExtendedMetadataDelegate extendedMetadataDelegate =
+                new ExtendedMetadataDelegate(resourceBackedMetadataProvider, extendedMetadata());
+        extendedMetadataDelegate.setMetadataTrustCheck(true);
+        extendedMetadataDelegate.setMetadataRequireSignature(false);
+        backgroundTaskTimer.purge();
+        return extendedMetadataDelegate;
+    }
+
+    @Bean
     @Qualifier("idp-okta")
     public ExtendedMetadataDelegate oktaExtendedMetadataProvider()
             throws MetadataProviderException {
@@ -286,7 +311,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter implements I
 		httpMetadataProvider.setParserPool(parserPool());
 		ExtendedMetadataDelegate extendedMetadataDelegate = 
 				new ExtendedMetadataDelegate(httpMetadataProvider, extendedMetadata());
-		extendedMetadataDelegate.setMetadataTrustCheck(true);
+		extendedMetadataDelegate.setMetadataTrustCheck(false);
 		extendedMetadataDelegate.setMetadataRequireSignature(false);
 		backgroundTaskTimer.purge();
 		return extendedMetadataDelegate;
@@ -301,6 +326,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter implements I
         List<MetadataProvider> providers = new ArrayList<MetadataProvider>();
         providers.add(ssoCircleExtendedMetadataProvider());
         providers.add(oktaExtendedMetadataProvider());
+        providers.add(pingIdExtendedMetadataProvider());
         return new CachingMetadataManager(providers);
     }
  
