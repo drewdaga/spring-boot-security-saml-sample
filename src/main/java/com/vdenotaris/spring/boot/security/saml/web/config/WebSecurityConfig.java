@@ -259,7 +259,23 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter implements I
         idpDiscovery.setIdpSelectionPath("/saml/discovery");
         return idpDiscovery;
     }
-    
+
+    @Bean
+    @Qualifier("idp-okta")
+    public ExtendedMetadataDelegate oktaExtendedMetadataProvider()
+            throws MetadataProviderException {
+        String idpOktaMetadataURL = "https://dev-717111.okta.com/app/exkvet054FsmRWj89356/sso/saml/metadata";
+        HTTPMetadataProvider httpMetadataProvider = new HTTPMetadataProvider(
+                this.backgroundTaskTimer, httpClient(), idpOktaMetadataURL);
+        httpMetadataProvider.setParserPool(parserPool());
+        ExtendedMetadataDelegate extendedMetadataDelegate =
+                new ExtendedMetadataDelegate(httpMetadataProvider, extendedMetadata());
+        extendedMetadataDelegate.setMetadataTrustCheck(false);
+        extendedMetadataDelegate.setMetadataRequireSignature(false);
+        backgroundTaskTimer.purge();
+        return extendedMetadataDelegate;
+    }
+
 	@Bean
 	@Qualifier("idp-ssocircle")
 	public ExtendedMetadataDelegate ssoCircleExtendedMetadataProvider()
@@ -284,6 +300,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter implements I
     public CachingMetadataManager metadata() throws MetadataProviderException {
         List<MetadataProvider> providers = new ArrayList<MetadataProvider>();
         providers.add(ssoCircleExtendedMetadataProvider());
+        providers.add(oktaExtendedMetadataProvider());
         return new CachingMetadataManager(providers);
     }
  
