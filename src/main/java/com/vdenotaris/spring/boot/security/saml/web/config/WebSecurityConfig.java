@@ -295,7 +295,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter implements I
         httpMetadataProvider.setParserPool(parserPool());
         ExtendedMetadataDelegate extendedMetadataDelegate =
                 new ExtendedMetadataDelegate(httpMetadataProvider, extendedMetadata());
-        extendedMetadataDelegate.setMetadataTrustCheck(false);
+        extendedMetadataDelegate.setMetadataTrustCheck(true);
         extendedMetadataDelegate.setMetadataRequireSignature(false);
         backgroundTaskTimer.purge();
         return extendedMetadataDelegate;
